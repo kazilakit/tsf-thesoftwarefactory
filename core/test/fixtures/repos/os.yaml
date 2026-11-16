@@ -1,0 +1,15 @@
+repo: os
+remote: git@github.com:example-org/blocks-os.git
+baseBranch: dev
+checks:
+  server:
+    cwd: server
+    build: dotnet build BlocksOS.sln
+    test: dotnet test BlocksOS.sln
+  client:
+    cwd: client
+    install: npm ci
+    typecheck: npm run type-check
+    lint: npm run lint
+    test: npm test
+  e2e: off

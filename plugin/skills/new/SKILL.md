@@ -1,0 +1,27 @@
+---
+name: new
+description: Draft a factory task from the user's words and create it on the Board (use only when the user runs /factory:new)
+argument-hint: [--ready] [--depends-on <ids>] [<factory>:] <what you want done>
+disable-model-invocation: true
+allowed-tools: Read, Write, Bash(node:*), Bash(HUSKY=0 node:*), Bash(printenv:*)
+---
+
+# Draft and create a task
+
+Turn the user's words into a task draft and create it on the Board with the factory CLI, run from this session. The task starts in `inbox` unless the user passed `--ready`, and waits for the tasks given with `--depends-on`. You never edit a task afterwards and never touch the Board any other way.
+
+Ground rules: never write vault notes, journals or memory, even if a CLAUDE.md asks for it; never touch the user's checkouts; never push. The guard still enforces this.
+
+The factory root, written `<root>` below, is the path found in step 0: replace `<root>` with it. Write each command out in full with the real values; do not use shell variables or command substitution. Put every path argument in double quotes. The CLI is `HUSKY=0 node "<root>/core/dist/cli.js"` (the core must be built); it takes the store from `FACTORY_STORE` (checked in step 0), so pass no store flag.
+
+0. Run `printenv FACTORY_ROOT` and `printenv FACTORY_STORE`. If either prints nothing, reply `factory: session env missing; start a new session` and stop: create nothing. Otherwise `<root>` is the FACTORY_ROOT path.
+1. Run `HUSKY=0 node "<root>/core/dist/cli.js" --mode session factories --json` to learn the factories, their repos and each repo's `baseBranch`. If it fails, show its one-line error and stop.
+2. `$ARGUMENTS` may start with the flags `--ready` and `--depends-on <ids>`, in either order. Read them from the start only, remember them, and remove them from the prompt before drafting (a `--ready` or `--depends-on` anywhere else is part of the user's words). `<ids>` is one word of task ids joined by commas, for example `T-19,T-20`; if it does not match `^T-[0-9]+(,T-[0-9]+)*$`, stop and ask the user for the ids in that form. If the prompt says in words that the task depends on or waits for other tasks by id and there is no `--depends-on`, ask the user whether to set those ids as dependencies before you create anything. From the rest of the prompt, draft:
+   - **factory:** the prompt's `<factory>:` prefix, if its first word is a factory id from step 1 followed by a colon (remove the prefix from the prompt); otherwise the one factory whose repo the prompt names. If there is no match, or more than one factory has that repo, stop and ask the user which factory, as a plain question listing the factories. Do not guess.
+   - **repo:** one of the chosen factory's repos, the one the prompt names or clearly implies. If it is ambiguous, stop and ask the user which repo, as a plain question. Do not guess.
+   - **base:** the repo's `baseBranch` (never main), unless the prompt names another branch. The base must match `[A-Za-z0-9._/-]+`; if it does not, stop and ask the user for a plain branch name. If the prompt asks for `main`, say the factory never uses `main` as a task base (protected branches are per factory; `main` is always protected) and use the repo's base.
+   - **title:** at most about 80 characters, imperative (for example "Fix the typo in README setup steps"). Strip every `"`, backtick, `$` and backslash from the title first: it goes into the command as one double-quoted argument.
+   - **description:** what to change and why, in the user's terms, then an `Acceptance criteria:` list of 2 to 5 checkable bullets. Do not invent requirements the prompt does not support; list open points as questions under `Open questions:`.
+3. Write the draft as JSON, `{"title": ..., "description": ..., "factory": ..., "repo": ..., "base": ...}`, to `<root>/runs/.drafts/${CLAUDE_SESSION_ID}.json` with the Write tool (it feeds the fallback link in step 5). Then write the description alone, as plain text, to `<root>/runs/.drafts/${CLAUDE_SESSION_ID}.md`.
+4. Run `HUSKY=0 node "<root>/core/dist/cli.js" --mode session new --factory "<factory>" --repo "<repo>" --base "<base>" --title "<title>" --description-file "<root>/runs/.drafts/${CLAUDE_SESSION_ID}.md"` with the real values written in. Add `--depends-on "<ids>"` only if the user gave `--depends-on`, with the ids as given. Add `--ready` at the end only if the user's arguments started with the `--ready` flag.
+5. If the command succeeded, show the user the CLI's line (for example `T-3 created in inbox`), then the title, the repo and base, the description, and `Depends on: <ids>` if the user gave any. If the task is in inbox, tell them to click **Mark ready** on the Board, then run `/factory:run`. If it is in ready, tell them to run `/factory:run`. If the command failed, show its one-line error, then run `node "${CLAUDE_SKILL_DIR}/link.mjs" "<root>/runs/.drafts/${CLAUDE_SESSION_ID}.json"`. It prints a pre-filled Board link only when `FACTORY_BOARD_URL` points at a Board page; if it prints one, show the link as the fallback: open it, check the form, set **Depends on** to the user's ids if they gave any (the link does not carry them), click **Create task**, then **Mark ready**, then run `/factory:run`. If link.mjs prints a message instead (for example that no Board link is set), show its message and tell the user to fix the CLI error and run `/factory:new` again; the draft stays in `<root>/runs/.drafts/`. Then stop. Do not start `/factory:run`.

@@ -1,0 +1,6 @@
+{
+  "name": "factory",
+  "version": "0.2.0",
+  "description": "The software factory's stage agents, skills and guard hooks",
+  "author": { "name": "the-software-factory" }
+}

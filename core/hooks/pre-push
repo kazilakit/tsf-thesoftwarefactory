@@ -1,0 +1,23 @@
+#!/bin/sh
+# factory: nothing reaches a protected branch except through a PR.
+# The factory's list is in <common git dir>/factory-protected-branches (one per line); main is always protected.
+# Without that file the old default (dev stg main) applies.
+common=$(git rev-parse --git-common-dir 2>/dev/null)
+set -f
+# An unreadable list fails closed: the default applies.
+list=$(cat "$common/factory-protected-branches" 2>/dev/null) || list="dev stg"
+if [ -n "$common" ] && [ -f "$common/factory-protected-branches" ]; then
+  protected="$list main"
+else
+  protected="dev stg main"
+fi
+# git feeds "<local ref> <local sha> <remote ref> <remote sha>" lines on stdin.
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  for b in $protected; do
+    if [ "$remote_ref" = "refs/heads/$b" ]; then
+      echo "factory: push to $b refused (protected branch)" >&2
+      exit 1
+    fi
+  done
+done
+exit 0

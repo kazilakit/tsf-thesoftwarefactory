@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.clones/
+.factory/
+.superpowers/
+runs/
+.DS_Store
+plugin/node_modules
+
+.worktrees/
+/factory
+/factory.cmd

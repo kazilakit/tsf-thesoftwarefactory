@@ -1,0 +1,14 @@
+{
+  "name": "the-software-factory",
+  "description": "The software factory's Claude Code plugin",
+  "owner": {
+    "name": "the-software-factory"
+  },
+  "plugins": [
+    {
+      "name": "factory",
+      "source": "./plugin",
+      "description": "The software factory's stage agents, skills and guard hooks"
+    }
+  ]
+}

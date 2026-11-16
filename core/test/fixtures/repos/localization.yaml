@@ -1,0 +1,15 @@
+repo: localization
+remote: git@github.com:example-org/blocks-localization.git
+baseBranch: dev
+checks:
+  server:
+    cwd: server
+    build: dotnet build Blocks.slnx
+    test: dotnet test Blocks.slnx
+  client:
+    cwd: client
+    install: npm ci
+    typecheck: npm run type-check
+    lint: npm run lint
+    test: npm test
+  e2e: off
